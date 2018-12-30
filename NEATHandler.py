@@ -1,0 +1,77 @@
+"""
+2-input XOR example -- this is most likely the simplest possible example.
+"""
+
+from __future__ import print_function
+import os
+import neat, GameController, pickle
+# 2-input XOR inputs and expected outputs.
+possible_outputs = ["left", "right", ""]
+
+
+class NEATHandler(object):
+
+    def __init__(self, gens):
+        self.gens = gens
+        self.gen = 1
+        self.num = 1
+        self.numPerGen = 50
+
+        self.run()
+
+    def eval_genomes(self, genomes, config):
+        for genome_id, genome in genomes:
+            self.final_score = 0
+            self.inputs = []
+            self.net = neat.nn.FeedForwardNetwork.create(genome, config)
+            game = GameController.GameController(self)
+
+            while game.playing_game:
+                pass
+            self.final_score = game.score
+            genome.fitness = self.final_score
+
+            if self.num % self.numPerGen == 0:
+                self.num = 1
+                self.gen += 1
+            self.num += 1
+
+    def select_key_from_net(self):
+        outputs = self.net.activate(self.inputs)
+        return possible_outputs[outputs.index(max(outputs))]
+
+    def set_stimuli(self, inputs):
+        self.inputs = inputs
+
+    def run(self):
+        # Load configuration.
+        local_dir = os.path.dirname(__file__)
+        config_path = os.path.join(local_dir, 'config-feedforward')
+        config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                             neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                             config_path)
+
+        # Create the population, which is the top-level object for a NEAT run.
+        p = neat.Population(config)
+
+        # Add a stdout reporter to show progress in the terminal.
+        p.add_reporter(neat.StdOutReporter(True))
+        stats = neat.StatisticsReporter()
+        p.add_reporter(stats)
+        p.add_reporter(neat.Checkpointer(1, filename_prefix="./NeatCheckpoints/neat-checkpoint-"))
+
+        winner = p.run(self.eval_genomes, self.gens)
+
+        # Display the winning genome.
+        print('\nBest genome:\n{!s}'.format(winner))
+
+        with open('winner-feedforward', 'wb') as f:
+            pickle.dump(winner, f)
+
+
+if __name__ == '__main__':
+    # Determine path to configuration file. This path manipulation is
+    # here so that the script will run successfully regardless of the
+    # current working directory.
+
+    NEATHandler(100)
